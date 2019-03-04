@@ -23,15 +23,15 @@ class Flexi_Pages {
 
 	private function default_args() {
 		return array(
-			'sort_column'            => 'post_title', 
-			'sort_order'             => 'ASC', 
+			'sort_column'            => 'post_title',
+			'sort_order'             => 'ASC',
 			'exclude'                => '',
 			'include'                => '',
 			'child_of'               => 0,
-			'parent'                 => -1, 
-			'show_subpages'          => 2, 
+			'parent'                 => -1,
+			'show_subpages'          => 2,
 			'hierarchy'              => 1,
-			'depth'                  => 0, 
+			'depth'                  => 0,
 			'show_home'              => '',
 			'show_date'              => 0,
 			'date_format'            => '',
@@ -62,7 +62,7 @@ class Flexi_Pages {
 					$exc_array[] = $page_id;
 			}
 			$args['exclude'] = implode(',', $exc_array);
-			$args['include'] = '';		
+			$args['include'] = '';
 		}
 
 		if( !is_numeric( $args['child_of'] ) ) {
@@ -90,14 +90,14 @@ class Flexi_Pages {
 	private function list_items( $pages, $level = 0 ) {
 		if(!$pages)
 			return;
-		
+
 		$list_items = "";
-		
+
 		foreach($pages as $page) {
-			
-			$date = "";			
+
+			$date = "";
 			if(isset($page['date']) && $page['date']) $date = " ".$page['date'];
-			
+
 			$list_items .= str_repeat("\t", $level+1).'<li class="'.$page['class'].'"><a href="'.$page['link'].'" title="'.$page['title'].'">'.$page['title'].'</a>'.$date;
 			if($page['children'])
 				$list_items .= $this->list_items($page['children'], $level+1);
@@ -121,7 +121,7 @@ class Flexi_Pages {
 		if( is_home() && !( isset($this->args['show_home']) && $this->args['show_home'] ) ) {
 			$dropdown_items .= "<option disabled selected><option>\n";
 		}
-		
+
 		foreach($pages as $page) {
 			$date = "";
 			if(isset($page['date']) && $page['date']) $date = " ".$page['date'];
@@ -134,112 +134,65 @@ class Flexi_Pages {
 		return $dropdown_items;
 	}
 
-	private function get_pages( $args = array(), $level = 1 ) {
-		$page_array = array();
-
-		if( isset( $args['show_home'] ) && $args['show_home'] ) {
-			$class = "home_page";
-			$class .= is_home()?" current_page_item":"";			
-			$page_array[] = array(
-				'ID'       => 'home', 
-				'title'    => $args['show_home'], 
-				'link'     => get_bloginfo('url'), 
-				'children' => array(),
-				'class'    => $class,
-			);
+	private function create_page_array( $args = array(), $page , $current_page_id ) {
+		$date = '';
+		if ( $args['show_date'] ) {
+			$x = explode( " ", $page->post_date );
+			$y = explode( "-", $x[0] );
+			$date = date( $args['date_format'], mktime( 0, 0, 0, $y[1], $y[2], $y[0] ) );
 		}
-			
-		if($args['show_subpages'] == -2) $args['show_subpages'] = 2;
-		if($args['show_subpages'] == -3) $args['show_subpages'] = 3;
-		if($args['show_subpages'] == 0) $args['depth'] = 1;
 
-			
-		if(isset($args['hierarchy']) && ($args['hierarchy'] == '0' || $args['hierarchy'] == 'off'))
-			$args['depth'] = -1;
+		$class = "page_item page-item-" . $page->ID;
+		if ( is_page( $page->ID ) ) {
+			$class .= " current_page_item";
+		} else if ( $page->ID == $current_page_id ) {
+			$class .= " current_page_ancestor current_page_parent";
+		}
 
-		$args['parent'] = ($args['depth'] == -1)?"-1":$args['child_of'];		
-		
-		$pages = get_pages( array(
-			'child_of' => $args['child_of'],
-			'parent' => $args['parent'],
-			'exclude' => $args['exclude'],
-			'include' => $args['include'],
-			'sort_column' => $args['sort_column'],
-			'sort_order' => $args['sort_order'],
-			) );
-		
+		$title = $page->post_title;
+		if ( $page->navigation_title ) {
+			$title = $page->navigation_title;
+		}
 
-		$currpage_hierarchy = $this->get_currpage_hierarchy();
-		
-		
-		if( $args['show_date'] && ( !$args['date_format'] || 'default' == $args['date_format'] ) )
-			$args['date_format'] = get_option('date_format');
-		
-		if($pages) {
-			foreach($pages as $page) {
-				if(
-					$args['show_subpages'] == 3 
-					&& !in_array($page->ID, $currpage_hierarchy) 
-					&& ( !isset($currpage_hierarchy[0]) || $page->post_parent != $currpage_hierarchy[0] )
-					&& ( !isset($currpage_hierarchy[1]) || $page->post_parent != $currpage_hierarchy[1] )
-					&& $page->post_parent != 0
-					)
-					continue;
-				
-					
-				$children = array();
-
-				if( !($args['depth'] == -1 || $args['depth'] == $level)  &&
-					!($args['show_subpages'] == 2 && !in_array($page->ID, $currpage_hierarchy)) &&
-					!$args['include']) {
-
-					$children = $this->get_pages(
-						array(
-							'child_of' => $page->ID,
-							'parent' => $page->ID,
-							'sort_column' => $args['sort_column'],
-							'sort_order' => $args['sort_order'],
-							'exclude' => $args['exclude'],
-							'include' => $args['include'],
-							'show_subpages' => $args['show_subpages'],
-							'depth' => $args['depth'],
-							'show_date' => $args['show_date'],
-							'date_format' => $args['date_format'],
-							),
-						$level+1
-						);
-				}
-					
-				
-				$date = '';
-				if($args['show_date']) {
-					$x = explode(" ", $page->post_date);
-					$y = explode("-", $x[0]);
-					$date = date($args['date_format'], mktime(0, 0, 0, $y[1], $y[2], $y[0]));
-				}
-				$class = "page_item page-item-".$page->ID;
-				if(is_page($page->ID))
-					$class .= " current_page_item";
-				else if(isset($currpage_hierarchy[1]) && $page->ID == $currpage_hierarchy[1])
-					$class .= " current_page_ancestor current_page_parent";
-				else if(in_array($page->ID, $currpage_hierarchy))
-					$class .= " current_page_ancestor";
-					
-				$page_array[] = array (
-					'ID' => $page->ID,
-					'title' => $page->post_title,
-					'link' => get_page_link($page->ID),
-					'date' => $date,
-					'children' => $children,
-					'class' => $class
-				);
+		$children = array();
+		$children_args = array(
+			'post_parent' => $page->ID,
+			'post_type'   => 'page',
+			'numberposts' => -1,
+			'post_status' => 'any',
+		);
+		$children_pages = get_children( $children_args );
+		if ( $children_pages ) {
+			$class .= " current_page_ancestor current_page_parent";
+			foreach ($children_pages as $children_page) {
+				$children[] = $this->create_page_array( $args, $children_page, $current_page_id );
 			}
 		}
 
-		return $page_array;
-
+		return  array (
+			'ID' => $page->ID,
+			'title' => $title,
+			'link' => get_page_link( $page->ID ),
+			'date' => $date,
+			'children' => $children,
+			'class' => $class,
+		);
 	}
 
+	private function get_pages( $args = array(), $level = 1 ) {
+		$current_page = get_post();
+		$top_parent = $current_page;
+		$id = $current_page->post_parent;
+		while ( $id != 0 ) {
+			$top_parent = get_post( $id );
+			$id = $top_parent->post_parent;
+		}
+
+		$page_array = array();
+		$page_array[] = $this->create_page_array( $args, $top_parent, $current_page->ID );
+
+		return $page_array;
+	}
 
 	private function get_currpage_hierarchy()
 	{
@@ -262,7 +215,7 @@ class Flexi_Pages {
 
 		// get parents, grandparents of the current page
 		$hierarchy[] = $curr_page->ID;
-	
+
 		while($curr_page->post_parent) {
 			$curr_page = get_post($curr_page->post_parent);
 			$curr_page = &$curr_page;
@@ -272,7 +225,7 @@ class Flexi_Pages {
 	}
 
 	private function pageids()
-	{	
+	{
 		global $wpdb;
 		$page_ids = $wpdb->get_col( "SELECT ID FROM $wpdb->posts WHERE post_type = 'page' AND post_status = 'publish'" );
 		return $page_ids;
