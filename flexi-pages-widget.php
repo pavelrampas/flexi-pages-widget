@@ -178,4 +178,9 @@ function filter_navigation_title($title ){
     return $title;
 }
 
+function flexipages_wp_enqueue_scripts() {
+    wp_enqueue_style( 'flexipages-style', '/wp-content/plugins/flexi-pages-widget/style.css' );
+}
+add_action( 'wp_enqueue_scripts', 'flexipages_wp_enqueue_scripts' );
+
 ?>
